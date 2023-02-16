@@ -1,6 +1,10 @@
 from rest_framework.views import APIView, Request, Response, status
 from .models import User
 from .serializers import UserSerializer
+from django.shortcuts import get_object_or_404
+from rest_framework_simplejwt.authentication import JWTAuthentication
+from rest_framework.permissions import IsAuthenticated
+from .permissions import IdAdmOrLoginUserOrAuthentication
 
 
 class UserView(APIView):
@@ -14,3 +18,23 @@ class UserView(APIView):
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(serializer.data, status.HTTP_201_CREATED)
+
+
+class UserDetailView(APIView):
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated, IdAdmOrLoginUserOrAuthentication]
+
+    def get(self, request: Request, users_id: int) -> Response:
+        user = get_object_or_404(User, id=users_id)
+        self.check_object_permissions(request, user)
+        serializer = UserSerializer(user)
+        return Response(serializer.data, status.HTTP_200_OK)
+
+    def patch(self, request: Request, users_id: int) -> Response:
+        user = get_object_or_404(User, id=users_id)
+        self.check_object_permissions(request, user)
+
+        serializer = UserSerializer(user, request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data, status.HTTP_200_OK)

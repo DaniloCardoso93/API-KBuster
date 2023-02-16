@@ -5,16 +5,21 @@ from rest_framework_simplejwt.authentication import JWTAuthentication
 from users.permissions import IsAdmOrReadOnly
 from rest_framework.permissions import IsAuthenticated
 from django.shortcuts import get_object_or_404
+from rest_framework.pagination import PageNumberPagination
 
 
-class MovieView(APIView):
+class MovieView(APIView, PageNumberPagination):
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsAdmOrReadOnly]
 
     def get(self, request: Request) -> Response:
         movie = Movie.objects.all()
-        serializer = MovieSerializer(movie, many=True)
-        return Response(serializer.data, status.HTTP_200_OK)
+
+        pages = self.paginate_queryset(movie, request)
+
+        serializer = MovieSerializer(pages, many=True)
+
+        return self.get_paginated_response(serializer.data)
 
     def post(self, request: Request) -> Response:
         serializer = MovieSerializer(data=request.data)
@@ -47,4 +52,4 @@ class OrderView(APIView):
         serializer = MovieOrderSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         serializer.save(movie_id=movies_id, user_id=request.user.id)
-        return Response(serializer.data, status.HTTP_200_OK)
+        return Response(serializer.data, status.HTTP_201_CREATED)
